@@ -1,0 +1,39 @@
+# AI Face Emotion Overlay - Requirements
+# Core Computer Vision
+opencv-python>=4.8.0
+mediapipe>=0.10.0
+numpy>=1.24.0
+Pillow>=10.0.0
+
+# Deep Learning / Emotion Model
+tensorflow>=2.13.0
+# OR use torch instead:
+# torch>=2.0.0
+# torchvision>=0.15.0
+
+# Pre-trained model (DeepFace as fallback)
+deepface>=0.0.79
+fer>=22.5.1
+
+# Data & Export
+pandas>=2.0.0
+matplotlib>=3.7.0
+
+# Web API (optional - for web version)
+fastapi>=0.100.0
+uvicorn>=0.23.0
+python-multipart>=0.0.6
+websockets>=11.0
+
+# Utilities
+pyyaml>=6.0
+tqdm>=4.65.0
+loguru>=0.7.0
+python-dotenv>=1.0.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+
+# Packaging (for EXE build)
+# pyinstaller>=5.13.0

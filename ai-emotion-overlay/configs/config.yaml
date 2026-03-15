@@ -1,0 +1,89 @@
+# ============================================================
+# AI Face Emotion Overlay - Configuration File
+# ============================================================
+
+app:
+  name: "AI Face Emotion Overlay"
+  version: "1.0.0"
+  debug: false
+
+camera:
+  device_id: 0           # Webcam index (0 = default webcam)
+  width: 1280
+  height: 720
+  fps: 30
+
+model:
+  # Model selection (deepface recommended - more accurate than legacy FER)
+  face_detection_confidence: 0.6
+  emotion_model: "deepface"      # Updated: "deepface" (was "fer", now deprecated)
+  
+  # ✅ FIX 1: Advanced Smoothing
+  smoothing_window: 8             # Rolling avg window (5-15, default 8-10 for best results)
+  
+  # ✅ FIX 2: Confidence Thresholds (hard rules)
+  min_confidence: 0.60            # Never display emotion below 60% confidence
+  min_difference_threshold: 0.10  # If top 2 emotions < 10% apart, keep previous
+  low_confidence_floor: 0.40      # If all emotions < 40%, default to Neutral
+  
+  # ✅ FIX 3: Cooldown Lock
+  cooldown_seconds: 0.8           # Lock emotion for 0.8-1.0 seconds after detection
+  
+  # ✅ FIX 4: Face Preprocessing (automatic, no config needed)
+  # - Brightness/contrast normalization (CLAHE)
+  # - Grayscale conversion (for FER models)
+  # - Automatic alignment
+  min_face_size: 48               # Minimum face crop size in pixels
+
+overlay:
+  show_hud: true
+  show_bounding_box: true
+  show_persona: false
+  show_landmarks: false
+  hud_position: "top_left"        # top_left | top_right | bottom_left | bottom_right
+  hud_alpha: 0.75                 # HUD transparency (0.0 - 1.0)
+  bbox_color: [255, 255, 255]     # White bounding box (BGR)
+  bbox_thickness: 2
+  label_font_scale: 0.65
+  progress_bar_width: 180
+
+persona:
+  enabled: false
+  scale_factor: 1.3               # Overlay scale relative to face size
+  assets:
+    happy: "crown.png"
+    sad: "rain.png"
+    angry: "fire.png"
+    surprise: "stars.png"
+    neutral: "glasses.png"
+    fear: "ghost.png"
+    disgust: "mask.png"
+
+recording:
+  auto_save: false
+  output_dir: "outputs/videos"
+  format: "mp4"
+  codec: "mp4v"
+
+session:
+  log_emotions: true
+  export_csv: true
+  csv_dir: "outputs/csv"
+  db_path: "outputs/sessions.db"
+
+display:
+  window_name: "AI Face Emotion Overlay"
+  font: 0                          # cv2.FONT_HERSHEY_SIMPLEX
+
+colors:
+  # HUD colors in BGR format
+  hud_bg: [20, 20, 20]
+  hud_text: [255, 255, 255]
+  hud_title: [255, 100, 255]       # Magenta
+  happy: [0, 255, 0]               # Green
+  sad: [255, 150, 0]               # Blue-ish
+  angry: [0, 0, 255]               # Red
+  surprise: [0, 255, 255]          # Yellow
+  neutral: [200, 200, 200]         # Gray
+  fear: [128, 0, 128]              # Purple
+  disgust: [0, 180, 100]           # Teal

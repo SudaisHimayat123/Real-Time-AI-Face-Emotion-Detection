@@ -1,0 +1,84 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+venv/
+env/
+.venv/
+
+# Outputs (generated at runtime)
+outputs/sessions.db
+outputs/videos/
+outputs/csv/
+outputs/uploads/
+outputs/*.log
+outputs/tensorboard_logs/
+
+# Models (large files)
+ai_models/*.h5
+ai_models/*.tflite
+ai_models/*.onnx
+ai_models/*.pkl
+
+# Datasets (large files)
+datasets/
+
+# Environment
+.env
+configs/.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Frontend build
+frontend/node_modules/
+frontend/dist/
+
+# Logs
+*.log
+app.log
+
+# PyInstaller
+*.spec.bak
+
+# Python bytecode / cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local Virtual Environment (never upload this)
+venv/
+env/
+.venv/
+
+# Large AI Model Weights (models auto download on first run of DeepFace, no need to upload)
+ai_models/*.h5
+ai_models/*.pt
+ai_models/*.onnx
+
+# User generated output files
+outputs/*.mp4
+outputs/*.csv
+outputs/sessions.db
+
+# OS junk files
+Thumbs.db
+.DS_Store
+
+# Secret configs
+.env
+configs/.env
