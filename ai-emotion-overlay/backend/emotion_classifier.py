@@ -60,24 +60,26 @@ class EmotionClassifier:
     def __init__(
         self,
         model_type: str = "fer",
-        smoothing_window: int = 8,
+        smoothing_window: int = 5,
         min_face_size: int = 48,
         cooldown_seconds: float = 0.8,
         min_confidence: float = 0.60,
         min_difference_threshold: float = 0.10,
-        low_confidence_floor: float = 0.40
+        low_confidence_floor: float = 0.40,
+        emotion_thresholds: Optional[Dict[str, float]] = None
     ):
         """
         Initialize emotion classifier with advanced stability.
 
         Args:
             model_type: Backend to use — "fer", "deepface", or "custom"
-            smoothing_window: Frame window (8-10 recommended, 5-15 accepted)
+            smoothing_window: Frame window (5-15, now default 5 for faster responsiveness)
             min_face_size: Minimum face crop size for inference
             cooldown_seconds: Lock emotion for N seconds after detection
-            min_confidence: Minimum score to display emotion (60% default)
+            min_confidence: Global minimum score (per-emotion thresholds override this)
             min_difference_threshold: Min gap between top 2 emotions (10% default)
             low_confidence_floor: If all < this, default to neutral (40% default)
+            emotion_thresholds: Dict mapping emotion -> confidence threshold (0-1)
         """
         self.model_type = model_type
         self.smoothing_window = max(5, min(smoothing_window, 15))  # Clamp 5-15
@@ -88,6 +90,13 @@ class EmotionClassifier:
         self.min_confidence = min_confidence
         self.min_difference_threshold = min_difference_threshold
         self.low_confidence_floor = low_confidence_floor
+        
+        # ── Per-emotion confidence thresholds ──────────────────────────────
+        # Allows stricter thresholds for easy emotions (Happy, Sad, Neutral)
+        # and more lenient for hard emotions (Angry, Fear, Surprise, Disgust)
+        if emotion_thresholds is None:
+            emotion_thresholds = {}
+        self.emotion_thresholds = emotion_thresholds
         
         # Per-face prediction history (for rolling average)
         self._history: Dict[int, deque] = {}
@@ -374,20 +383,27 @@ class EmotionClassifier:
         face_index: int
     ) -> Dict[str, float]:
         """
-        ✅ FIX 2: Apply hard confidence threshold rules.
+        ✅ FIX 2: Apply hard confidence threshold rules (NOW WITH PER-EMOTION TUNING).
         
-        Rule 1: Never display emotion unless confidence >= 60%
+        Rule 1: Never display emotion unless confidence >= threshold (emotion-specific)
         Rule 2: If difference between top 2 emotions < 10%, keep previous emotion
         Rule 3: If all emotions < 40%, default to Neutral (ignore low confidence noise)
+        
+        NEW: Per-emotion thresholds allow:
+          - Strict thresholds for easy emotions: Happy (60%), Sad (60%), Neutral (60%)
+          - Lenient thresholds for hard emotions: Angry (45%), Fear (45%), Surprise (45%), Disgust (45%)
         """
         # Get top 2 emotions by confidence
         sorted_emotions = sorted(scores.items(), key=lambda x: x[1], reverse=True)
         top_emotion, top_score = sorted_emotions[0]
         second_emotion, second_score = sorted_emotions[1] if len(sorted_emotions) > 1 else ("neutral", 0.0)
 
-        # RULE 1: Never show emotion below 60% confidence
-        if top_score < self.min_confidence:
-            logger.debug(f"Top emotion {top_emotion} below threshold ({top_score:.1%}), using Neutral")
+        # RULE 1: Check emotion-specific threshold (or fall back to global min_confidence)
+        emotion_threshold = self.emotion_thresholds.get(
+            top_emotion, self.min_confidence
+        )
+        if top_score < emotion_threshold:
+            logger.debug(f"Top emotion {top_emotion} below threshold ({top_score:.1%} < {emotion_threshold:.0%}), using Neutral")
             result = self._neutral_bias()
             result["neutral"] = 1.0
             return result

@@ -66,6 +66,11 @@ class EmotionOverlayApp:
         self._fps_counter = 0
         self._fps_timer = time.time()
         self._fps = 0.0
+        
+        # ✅ Performance optimization: Frame skipping
+        self.frame_skip = config.get("performance", {}).get("frame_skip", 1)  # Default: no skipping
+        self.frame_counter = 0
+        self.last_emotion_results = []  # Reuse predictions for skipped frames
 
         logger.info("🚀 Initializing AI Face Emotion Overlay...")
 
@@ -87,14 +92,16 @@ class EmotionOverlayApp:
 
         # Initialize Emotion Classifier (MUST SUCCEED)
         try:
+            emotion_thresholds = model_cfg.get("emotion_thresholds", {})
             self.emotion_classifier = EmotionClassifier(
                 model_type=model_cfg.get("emotion_model", "fer"),
-                smoothing_window=model_cfg.get("smoothing_window", 8),
+                smoothing_window=model_cfg.get("smoothing_window", 5),
                 min_face_size=model_cfg.get("min_face_size", 48),
                 cooldown_seconds=model_cfg.get("cooldown_seconds", 0.8),
                 min_confidence=model_cfg.get("min_confidence", 0.60),
                 min_difference_threshold=model_cfg.get("min_difference_threshold", 0.10),
-                low_confidence_floor=model_cfg.get("low_confidence_floor", 0.40)
+                low_confidence_floor=model_cfg.get("low_confidence_floor", 0.40),
+                emotion_thresholds=emotion_thresholds
             )
             logger.success("✅ Emotion Classifier initialized")
             
@@ -176,9 +183,12 @@ class EmotionOverlayApp:
         logger.info("=" * 70)
         logger.success("✅ ALL MODELS READY - Starting main loop")
         logger.info(f"📊 Using: {self.emotion_classifier.model_type.upper()} emotion model")
-        logger.info(f"🔧 Smoothing window: {self.emotion_classifier.smoothing_window} frames")
+        logger.info(f"🔧 Smoothing window: {self.emotion_classifier.smoothing_window} frames (IMPROVED: faster responsiveness)")
         logger.info(f"⏱️  Cooldown lock: {self.emotion_classifier.cooldown_seconds}s")
-        logger.info(f"✋ Min confidence: {self.emotion_classifier.min_confidence:.0%}")
+        logger.info(f"✋ Min confidence (global): {self.emotion_classifier.min_confidence:.0%}")
+        if self.emotion_classifier.emotion_thresholds:
+            logger.info(f"🎯 Per-emotion thresholds: {self.emotion_classifier.emotion_thresholds}")
+        logger.info(f"⚡ Frame skip optimization: inference every {self.frame_skip} frame(s)")
         logger.info("=" * 70)
         logger.info("⌨️  Controls: q/ESC=quit, h=HUD, b=boxes, p=persona, r=record, s=export, SPACE=pause")
 
@@ -230,11 +240,31 @@ class EmotionOverlayApp:
             detections = self.face_detector.detect(frame)
             emotion_results = []
 
-            for i, det in enumerate(detections):
-                scores = self.emotion_classifier.predict(det.face_crop, face_index=i)
-                emotion_results.append(scores)
+            # ✅ FIX 5: Frame skipping optimization
+            # Run inference every Nth frame (specified by frame_skip)
+            # Reuse last prediction for skipped frames to improve FPS
+            if self.frame_counter % self.frame_skip == 0:
+                # This is an inference frame - run full emotion classification
+                for i, det in enumerate(detections):
+                    scores = self.emotion_classifier.predict(det.face_crop, face_index=i)
+                    emotion_results.append(scores)
+                # Save results for reuse in skipped frames
+                self.last_emotion_results = emotion_results
+            else:
+                # Skipped frame - reuse last results (aligned with current detections)
+                if len(detections) == len(self.last_emotion_results):
+                    emotion_results = self.last_emotion_results
+                else:
+                    # Face count changed, run inference for this frame
+                    for i, det in enumerate(detections):
+                        scores = self.emotion_classifier.predict(det.face_crop, face_index=i)
+                        emotion_results.append(scores)
+                    self.last_emotion_results = emotion_results
+            
+            self.frame_counter += 1
 
-                # Log to session
+            # Log to session
+            for i, scores in enumerate(emotion_results):
                 if self.session_logger:
                     dominant, confidence = EmotionClassifier.get_dominant_emotion(scores)
                     self.session_logger.log_frame(

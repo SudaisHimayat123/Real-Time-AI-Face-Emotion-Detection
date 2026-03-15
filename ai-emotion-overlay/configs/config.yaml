@@ -18,13 +18,24 @@ model:
   face_detection_confidence: 0.6
   emotion_model: "deepface"      # Updated: "deepface" (was "fer", now deprecated)
   
-  # ✅ FIX 1: Advanced Smoothing
-  smoothing_window: 8             # Rolling avg window (5-15, default 8-10 for best results)
+  # ✅ FIX 1: Advanced Smoothing (IMPROVED: Reduced to 5 frames for faster response)
+  smoothing_window: 5             # Rolling avg window (5-15, reduced from 8 for better responsiveness)
   
-  # ✅ FIX 2: Confidence Thresholds (hard rules)
-  min_confidence: 0.60            # Never display emotion below 60% confidence
+  # ✅ FIX 2: Confidence Thresholds (hard rules) - PER EMOTION TUNING
+  # Global threshold used as fallback; per-emotion thresholds defined below
+  min_confidence: 0.60            # Global minimum (overridden by emotion-specific values)
   min_difference_threshold: 0.10  # If top 2 emotions < 10% apart, keep previous
   low_confidence_floor: 0.40      # If all emotions < 40%, default to Neutral
+  
+  # Per-emotion confidence thresholds (higher = more selective)
+  emotion_thresholds:
+    happy: 0.60                   # Easy emotions: stricter thresholds
+    sad: 0.60
+    neutral: 0.60
+    angry: 0.45                   # Hard emotions: more lenient for better detection
+    fear: 0.45
+    surprise: 0.45
+    disgust: 0.45
   
   # ✅ FIX 3: Cooldown Lock
   cooldown_seconds: 0.8           # Lock emotion for 0.8-1.0 seconds after detection
@@ -64,6 +75,11 @@ recording:
   output_dir: "outputs/videos"
   format: "mp4"
   codec: "mp4v"
+
+performance:
+  # ✅ FIX 5: Frame skipping optimization
+  frame_skip: 2                   # Run inference every Nth frame (1=every frame, 2=every 2nd, etc)
+                                  # Reuses last prediction for skipped frames to improve FPS
 
 session:
   log_emotions: true

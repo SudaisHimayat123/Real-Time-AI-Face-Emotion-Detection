@@ -470,6 +470,9 @@ class HUDRenderer:
     ) -> Dict[str, float]:
         """
         Average emotion scores across all detected faces for the HUD display.
+        IMPROVED: Shows raw average confidence scores (NOT normalized).
+        This allows seeing actual confidence levels instead of proportional percentages.
+        
         If no faces detected, returns uniform scores.
         """
         if not emotion_results:
@@ -482,7 +485,9 @@ class HUDRenderer:
                 aggregated[emotion] = aggregated.get(emotion, 0.0) + score
 
         n = len(emotion_results)
-        return {k: v / n for k, v in aggregated.items()}
+        # Return raw averaged scores WITHOUT normalization
+        # This shows actual confidence instead of proportion summing to 1.0
+        return {k: min(1.0, v / n) for k, v in aggregated.items()}
 
     def toggle_hud(self):
         """Toggle HUD visibility."""
